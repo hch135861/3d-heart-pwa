@@ -202,17 +202,6 @@ heart.position.y = 0.8;
 scene.add(heart);
 
 
-// 底部光晕
-const glowGeo = new THREE.PlaneGeometry(12, 4);
-const glowMat = new THREE.MeshBasicMaterial({
-    color: 0xff3388, transparent: true, opacity: 0.05,
-    side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
-});
-const glowMesh = new THREE.Mesh(glowGeo, glowMat);
-glowMesh.position.set(0, -3.5, -3);
-glowMesh.rotation.x = -0.3;
-scene.add(glowMesh);
-
 // --- 动画 ---
 const clock = new THREE.Clock();
 let animationFrameId = 0;
@@ -223,7 +212,6 @@ function animate() {
     const time = clock.getElapsedTime();
     const breathe = 1 + Math.sin(time * 0.4) * 0.003;
     heart.scale.set(breathe, breathe, breathe);
-    glowMat.opacity = 0.06 + Math.sin(time * 0.3) * 0.03;
     controls.update();
     renderer.render(scene, camera);
 }
