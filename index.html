@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#050510">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="3D 爱心">
+    <link rel="manifest" href="./manifest.webmanifest">
+    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
+    <title>3D 爱心</title>
+    <style>
+        * { margin: 0; padding: 0; }
+        body {
+            overflow: hidden;
+            background: #050510;
+            touch-action: none;
+            -webkit-tap-highlight-color: transparent;
+            position: fixed;
+            width: 100%;
+            height: 100%;
+            user-select: none;
+            -webkit-user-select: none;
+        }
+        canvas { display: block; width: 100%; height: 100%; }
+
+        #loading {
+            position: fixed;
+            inset: 0;
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background: #050510;
+            color: #fff;
+            font-family: -apple-system, sans-serif;
+            transition: opacity 0.8s;
+            pointer-events: none;
+        }
+        #loading.hide { opacity: 0; }
+        .loader-heart { font-size: 48px; animation: pulse 1s ease-in-out infinite; }
+        @keyframes pulse {
+            0%, 100% { transform: scale(1); opacity: 0.6; }
+            50% { transform: scale(1.15); opacity: 1; }
+        }
+        #loading p { margin-top: 12px; font-size: 12px; letter-spacing: 2px; opacity: 0.3; font-weight: 300; }
+
+    </style>
+</head>
+<body>
+
+<div id="loading">
+    <div class="loader-heart">💗</div>
+    <p>生成爱心阵法</p>
+</div>
+<script type="importmap">
+{
+    "imports": {
+        "three": "./vendor/three.module.js",
+        "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js"
+    }
+}
+</script>
+
+<script type="module">
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+// --- 场景 ---
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x050510);
+
+const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
+function getInitialCameraDistance() {
+    const aspect = window.innerWidth / window.innerHeight;
+    return aspect < 0.7 ? 58 : aspect < 1 ? 38 : 28;
+}
+camera.position.set(0, 1.5, getInitialCameraDistance());
+
+const memory = navigator.deviceMemory || 4;
+const cores = navigator.hardwareConcurrency || 4;
+const screenPixels = window.innerWidth * window.innerHeight * window.devicePixelRatio;
+const quality = Math.min(memory / 4, cores / 4, 2500000 / Math.max(screenPixels, 1));
+const particleCount = quality < 0.65 ? 20000 : quality < 1.2 ? 35000 : 50000;
+const pixelRatioLimit = quality < 0.65 ? 1.25 : quality < 1.2 ? 1.5 : 2;
+
+const renderer = new THREE.WebGLRenderer({
+    antialias: particleCount > 20000,
+    alpha: true,
+    powerPreference: 'high-performance',
+});
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioLimit));
+renderer.setSize(window.innerWidth, window.innerHeight);
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 1.2;
+document.body.appendChild(renderer.domElement);
+
+// --- 控制器 ---
+const controls = new OrbitControls(camera, renderer.domElement);
+controls.enableDamping = true;
+controls.dampingFactor = 0.08;
+controls.autoRotate = true;
+controls.autoRotateSpeed = 1.8;
+controls.minDistance = 10;
+controls.maxDistance = 80;
+controls.target.set(0, 0.3, 0);
+controls.update();
+
+// --- 灯光 ---
+const ambient = new THREE.AmbientLight(0x2244aa, 0.3);
+scene.add(ambient);
+const mainLight = new THREE.DirectionalLight(0xff88cc, 0.6);
+mainLight.position.set(3, 8, 5);
+scene.add(mainLight);
+const fillLight = new THREE.DirectionalLight(0x4488ff, 0.4);
+fillLight.position.set(-4, -2, -6);
+scene.add(fillLight);
+const rimLight = new THREE.DirectionalLight(0x88ddff, 0.3);
+rimLight.position.set(0, -5, 8);
+scene.add(rimLight);
+
+// ============================================================
+//  倒置 3D 爱心
+// ============================================================
+const geo = new THREE.BufferGeometry();
+const pos = new Float32Array(particleCount * 3);
+const col = new Float32Array(particleCount * 3);
+const sizes = new Float32Array(particleCount);
+
+let idx = 0;
+const pink = new THREE.Color('#ff71ce');
+const blue = new THREE.Color('#01cdfe');
+const purple = new THREE.Color('#b794f4');
+const warmPink = new THREE.Color('#ff6b9d');
+const workingColor = new THREE.Color();
+while (idx < particleCount) {
+    const theta = Math.random() * Math.PI * 2;
+    const phi = Math.random() * Math.PI;
+    const rBase = 16 * Math.sin(phi) ** 3;
+    const x = rBase * Math.cos(theta);
+    let y = -(13 * Math.cos(phi) - 5 * Math.cos(2 * phi) - 2 * Math.cos(3 * phi) - Math.cos(4 * phi));
+    y = -y;
+    const archY = 0.5 * x * x + 10.5;
+    if (y > 9 && y > archY) continue;
+    const dist = Math.sqrt(x * x + y * y) / 15;
+    const thick = Math.sqrt(Math.max(0, 1 - dist * dist)) * 12;
+    const z = (Math.random() - 0.5) * thick;
+    const scale = 0.72;
+    pos[idx * 3] = x * scale;
+    pos[idx * 3 + 1] = y * scale;
+    pos[idx * 3 + 2] = z * scale * 0.9;
+    if (y > 0) {
+        const t = Math.min(1, y / 6);
+        workingColor.copy(blue).lerp(purple, t * 0.6);
+    } else {
+        const t = Math.min(1, -y / 8);
+        workingColor.copy(pink).lerp(warmPink, t * 0.7);
+    }
+    workingColor.multiplyScalar(0.8 + Math.random() * 0.4);
+    col[idx * 3] = workingColor.r;
+    col[idx * 3 + 1] = workingColor.g;
+    col[idx * 3 + 2] = workingColor.b;
+    sizes[idx] = 0.04 + Math.random() * 0.05;
+    if (Math.abs(z) < 2) sizes[idx] += 0.02;
+    idx++;
+}
+
+geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
+geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+
+const vertexShader = `
+    attribute float size;
+    attribute vec3 color;
+    varying vec3 vColor;
+    void main() {
+        vColor = color;
+        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+        gl_PointSize = size * (280.0 / -mvPosition.z);
+        gl_Position = projectionMatrix * mvPosition;
+    }
+`;
+const fragmentShader = `
+    varying vec3 vColor;
+    void main() {
+        float d = distance(gl_PointCoord, vec2(0.5));
+        if (d > 0.5) discard;
+        float alpha = 1.0 - smoothstep(0.0, 0.5, d);
+        float glow = exp(-d * 6.0);
+        vec3 color = vColor + vec3(0.3, 0.1, 0.5) * glow * 0.3;
+        gl_FragColor = vec4(color, alpha * 0.85);
+    }
+`;
+const particleMat = new THREE.ShaderMaterial({
+    vertexShader, fragmentShader,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const heart = new THREE.Points(geo, particleMat);
+heart.position.y = 0.8;
+scene.add(heart);
+
+// --- 星尘 ---
+const starCount = 800;
+const starGeo = new THREE.BufferGeometry();
+const starPos = new Float32Array(starCount * 3);
+const starSizes = new Float32Array(starCount);
+const starColors = new Float32Array(starCount * 3);
+for (let i = 0; i < starCount; i++) {
+    const r = 15 + Math.random() * 30;
+    const t2 = Math.random() * Math.PI * 2;
+    const p2 = Math.acos(2 * Math.random() - 1);
+    starPos[i * 3] = r * Math.sin(p2) * Math.cos(t2);
+    starPos[i * 3 + 1] = r * Math.cos(p2) * 0.6;
+    starPos[i * 3 + 2] = r * Math.sin(p2) * Math.sin(t2) - 10;
+    starSizes[i] = 0.02 + Math.random() * 0.06;
+    const c = new THREE.Color(0x4488ff).lerp(new THREE.Color(0x8844ff), Math.random() * 0.5);
+    starColors[i * 3] = c.r * 0.4;
+    starColors[i * 3 + 1] = c.g * 0.4;
+    starColors[i * 3 + 2] = c.b * 0.4;
+}
+starGeo.setAttribute('position', new THREE.BufferAttribute(starPos, 3));
+starGeo.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+starGeo.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+const starMat = new THREE.ShaderMaterial({
+    vertexShader: `
+        attribute float size; attribute vec3 color; varying vec3 vColor;
+        void main() { vColor = color; vec4 mvPosition = modelViewMatrix * vec4(position, 1.0); gl_PointSize = size * (200.0 / -mvPosition.z); gl_Position = projectionMatrix * mvPosition; }
+    `,
+    fragmentShader: `
+        varying vec3 vColor;
+        void main() { float d = distance(gl_PointCoord, vec2(0.5)); if (d > 0.5) discard; float alpha = exp(-d * 8.0); gl_FragColor = vec4(vColor, alpha * 0.4); }
+    `,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+});
+const stars = new THREE.Points(starGeo, starMat);
+scene.add(stars);
+
+// 底部光晕
+const glowGeo = new THREE.PlaneGeometry(12, 4);
+const glowMat = new THREE.MeshBasicMaterial({
+    color: 0x4422aa, transparent: true, opacity: 0.08,
+    side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
+});
+const glowMesh = new THREE.Mesh(glowGeo, glowMat);
+glowMesh.position.set(0, -3.5, -3);
+glowMesh.rotation.x = -0.3;
+scene.add(glowMesh);
+
+// --- 动画 ---
+const clock = new THREE.Clock();
+let animationFrameId = 0;
+let running = false;
+function animate() {
+    if (!running) return;
+    animationFrameId = requestAnimationFrame(animate);
+    const time = clock.getElapsedTime();
+    const breathe = 1 + Math.sin(time * 0.4) * 0.003;
+    heart.scale.set(breathe, breathe, breathe);
+    stars.rotation.y += 0.0002;
+    stars.rotation.x += 0.00005;
+    glowMat.opacity = 0.06 + Math.sin(time * 0.3) * 0.03;
+    controls.update();
+    renderer.render(scene, camera);
+}
+function startAnimation() {
+    if (running) return;
+    running = true;
+    clock.start();
+    animate();
+}
+function stopAnimation() {
+    running = false;
+    cancelAnimationFrame(animationFrameId);
+    animationFrameId = 0;
+    clock.stop();
+}
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) stopAnimation();
+    else startAnimation();
+});
+renderer.domElement.addEventListener('webglcontextlost', (event) => {
+    event.preventDefault();
+    stopAnimation();
+    const loading = document.getElementById('loading');
+    loading.classList.remove('hide');
+    loading.querySelector('p').textContent = '当前设备无法继续显示 3D 爱心';
+});
+startAnimation();
+
+// --- 加载完成 ---
+document.getElementById('loading').classList.add('hide');
+
+// --- 响应式 ---
+window.addEventListener('resize', () => {
+    const w = window.innerWidth, h = window.innerHeight;
+    camera.aspect = w / h;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioLimit));
+    renderer.setSize(w, h);
+});
+
+// 触摸自动旋转控制
+let idleTimer = null;
+function onUserInteract() { controls.autoRotate = false; clearTimeout(idleTimer); }
+function onUserRelease() {
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => { controls.autoRotate = true; }, 3500);
+}
+document.body.addEventListener('touchstart', onUserInteract, { passive: true });
+document.body.addEventListener('touchend', onUserRelease, { passive: true });
+document.body.addEventListener('mousedown', onUserInteract);
+document.body.addEventListener('mouseup', onUserRelease);
+
+// 阻止页面滚动
+document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+
+console.log('❤️ 3D 爱心已启动 — 可添加到桌面使用');
+</script>
+<script>
+window.addEventListener('load', () => {
+    if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('./service-worker.js')
+            .catch((error) => console.warn('Service Worker 注册失败，当前页面仍可联网使用。', error));
+    }
+});
+</script>
+</body>
+</html>
