@@ -145,7 +145,7 @@ while (idx < particleCount) {
     const archY = 0.5 * x * x + 10.5;
     if (y > 9 && y > archY) continue;
     const dist = Math.sqrt(x * x + y * y) / 15;
-    const thick = Math.sqrt(Math.max(0, 1 - dist * dist)) * 7;
+    const thick = Math.sqrt(Math.max(0, 1 - dist * dist)) * 12;
     const z = (Math.random() - 0.5) * thick;
     const scale = 0.72;
     pos[idx * 3] = x * scale;
