@@ -240,7 +240,7 @@ scene.add(stars);
 // 底部光晕
 const glowGeo = new THREE.PlaneGeometry(12, 4);
 const glowMat = new THREE.MeshBasicMaterial({
-    color: 0x4422aa, transparent: true, opacity: 0.08,
+    color: 0xff3388, transparent: true, opacity: 0.05,
     side: THREE.DoubleSide, blending: THREE.AdditiveBlending, depthWrite: false,
 });
 const glowMesh = new THREE.Mesh(glowGeo, glowMat);
