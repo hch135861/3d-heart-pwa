@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'heart-pwa-';
-const CACHE_NAME = 'heart-pwa-v1';
+const CACHE_NAME = 'heart-pwa-v3.10';
 const CORE_ASSETS = [
     './',
     './index.html',
@@ -13,6 +13,7 @@ const CORE_ASSETS = [
 ];
 
 self.addEventListener('install', (event) => {
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME).then((cache) => cache.addAll(CORE_ASSETS))
     );
@@ -33,6 +34,21 @@ self.addEventListener('activate', (event) => {
 self.addEventListener('fetch', (event) => {
     const request = event.request;
     if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return;
+
+    if (request.mode === 'navigate') {
+        event.respondWith(
+            fetch(request)
+                .then((response) => {
+                    if (response && response.status === 200) {
+                        const copy = response.clone();
+                        caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
+                    }
+                    return response;
+                })
+                .catch(() => caches.match('./index.html').then((cached) => cached || caches.match('./')))
+        );
+        return;
+    }
 
     event.respondWith(
         caches.match(request).then((cached) => {
