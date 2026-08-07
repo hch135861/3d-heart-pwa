@@ -1,0 +1,37 @@
+name: Shrink Luobu Heart 10 Percent
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/shrink-luobu-10.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  shrink:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Shrink heart another 10 percent
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          p = Path('3D-爱心-V3.10-洛布辛苦啦.html')
+          s = p.read_text(encoding='utf-8')
+          old = 'const COUNT = 50000, SC = 0.384; // 洛布版：爱心缩为 V3.10 的 2/3'
+          new = 'const COUNT = 50000, SC = 0.3456; // 洛布版：在 2/3 基础上再缩小 10%'
+          if old not in s:
+              raise SystemExit('Target scale line not found')
+          p.write_text(s.replace(old, new, 1), encoding='utf-8')
+          PY
+      - name: Commit change
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add '3D-爱心-V3.10-洛布辛苦啦.html'
+          git commit -m 'Shrink 洛布 heart another 10 percent'
+          git push
