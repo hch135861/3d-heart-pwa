@@ -6,276 +6,641 @@
     <meta name="theme-color" content="#050510">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="3D 爱心">
-    <link rel="manifest" href="./manifest.webmanifest">
-    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">
-    <title>3D 爱心</title>
+    <title>3D 爱心 · 粒子情书 V3.9</title>
     <style>
-        * { margin: 0; padding: 0; }
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html, body { width: 100%; height: 100%; background: #050510; }
         body {
             overflow: hidden;
-            background: #050510;
             touch-action: none;
             -webkit-tap-highlight-color: transparent;
             position: fixed;
-            width: 100%;
-            height: 100%;
+            width: 100%; height: 100%;
+            width: 100dvi; height: 100dvb;
             user-select: none;
             -webkit-user-select: none;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
         }
         canvas { display: block; width: 100%; height: 100%; }
-
         #loading {
-            position: fixed;
-            inset: 0;
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-            background: #050510;
-            color: #fff;
-            font-family: -apple-system, sans-serif;
-            transition: opacity 0.8s;
-            pointer-events: none;
+            position: fixed; inset: 0; z-index: 100;
+            display: flex; flex-direction: column;
+            justify-content: center; align-items: center;
+            background: #050510; color: #fff;
+            transition: opacity 0.65s ease-out; pointer-events: none;
         }
         #loading.hide { opacity: 0; }
-        .loader-heart { font-size: 48px; animation: pulse 1s ease-in-out infinite; }
+        .loader-heart { font-size: 48px; animation: pulse 1.2s ease-in-out infinite; }
         @keyframes pulse {
             0%, 100% { transform: scale(1); opacity: 0.6; }
             50% { transform: scale(1.15); opacity: 1; }
         }
-        #loading p { margin-top: 12px; font-size: 12px; letter-spacing: 2px; opacity: 0.3; font-weight: 300; }
-
+        #loading p { margin-top: 14px; font-size: 12px; letter-spacing: 3px; opacity: 0.25; font-weight: 300; }
+        #install-hint {
+            position: fixed; bottom: max(36px, env(safe-area-inset-bottom)); left: 50%; transform: translateX(-50%);
+            color: rgba(255,255,255,0.22); font-size: 11px; z-index: 10;
+            pointer-events: none; text-align: center; white-space: nowrap;
+            background: rgba(0,0,0,0.34); padding: 8px 18px; border-radius: 20px;
+            backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255,255,255,0.055);
+            transition: opacity 2s ease-out; letter-spacing: 1px;
+        }
     </style>
 </head>
 <body>
+<div id="loading"><div class="loader-heart">💗</div><p>正在生成</p></div>
+<div id="install-hint">轻点爱心 · 更大的 I LOVE YOU · 星尘疏散 · 滑动旋转</div>
 
-<div id="loading">
-    <div class="loader-heart">💗</div>
-    <p>生成爱心阵法</p>
-</div>
 <script type="importmap">
-{
-    "imports": {
-        "three": "./vendor/three.module.js",
-        "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js"
-    }
-}
+{ "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" } }
 </script>
-
 <script type="module">
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-// --- 场景 ---
 const scene = new THREE.Scene();
 scene.background = new THREE.Color(0x050510);
+scene.fog = new THREE.FogExp2(0x050510, 0.00006);
 
-const camera = new THREE.PerspectiveCamera(50, window.innerWidth / window.innerHeight, 0.1, 100);
-function getInitialCameraDistance() {
-    const aspect = window.innerWidth / window.innerHeight;
-    return aspect < 0.7 ? 58 : aspect < 1 ? 38 : 28;
-}
-camera.position.set(0, 1.5, getInitialCameraDistance());
+const camera = new THREE.PerspectiveCamera(50, innerWidth / innerHeight, 0.1, 100);
+camera.position.set(0, 1.5, 12);
 
-const memory = navigator.deviceMemory || 4;
-const cores = navigator.hardwareConcurrency || 4;
-const screenPixels = window.innerWidth * window.innerHeight * window.devicePixelRatio;
-const quality = Math.min(memory / 4, cores / 4, 2500000 / Math.max(screenPixels, 1));
-const particleCount = quality < 0.65 ? 20000 : quality < 1.2 ? 35000 : 50000;
-const pixelRatioLimit = quality < 0.65 ? 1.25 : quality < 1.2 ? 1.5 : 2;
-
-const renderer = new THREE.WebGLRenderer({
-    antialias: particleCount > 20000,
-    alpha: true,
-    powerPreference: 'high-performance',
-});
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioLimit));
-renderer.setSize(window.innerWidth, window.innerHeight);
+const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, powerPreference: 'high-performance' });
+renderer.setPixelRatio(Math.min(devicePixelRatio, 2.25));
+renderer.setSize(innerWidth, innerHeight);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.2;
+renderer.toneMappingExposure = 1.5;
 document.body.appendChild(renderer.domElement);
 
-// --- 控制器 ---
 const controls = new OrbitControls(camera, renderer.domElement);
 controls.enableDamping = true;
 controls.dampingFactor = 0.08;
+const AUTO_ROTATE_SPEED = 1.55;
 controls.autoRotate = true;
-controls.autoRotateSpeed = 1.8;
-controls.minDistance = 10;
-controls.maxDistance = 80;
+controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
+controls.minDistance = 3.5;
+controls.maxDistance = 20;
 controls.target.set(0, 0.3, 0);
 controls.update();
 
-// --- 灯光 ---
-const ambient = new THREE.AmbientLight(0x332a4a, 0.25);
-scene.add(ambient);
-const mainLight = new THREE.DirectionalLight(0xff88cc, 0.6);
-mainLight.position.set(3, 8, 5);
-scene.add(mainLight);
-const fillLight = new THREE.DirectionalLight(0x6644aa, 0.3);
-fillLight.position.set(-4, -2, -6);
-scene.add(fillLight);
-const rimLight = new THREE.DirectionalLight(0x886688, 0.2);
-rimLight.position.set(0, -5, 8);
-scene.add(rimLight);
+scene.add(new THREE.AmbientLight(0x2233aa, 0.35));
+const l1 = new THREE.DirectionalLight(0xff88cc, 0.7); l1.position.set(3, 9, 5); scene.add(l1);
+const l2 = new THREE.DirectionalLight(0x4488ff, 0.45); l2.position.set(-4, -3, -6); scene.add(l2);
+const l3 = new THREE.DirectionalLight(0x88ddff, 0.35); l3.position.set(0, -5, 8); scene.add(l3);
+const burstLight = new THREE.PointLight(0xffc8f3, 0, 14, 2); burstLight.position.set(0, 0.8, 2.5); scene.add(burstLight);
 
-// ============================================================
-//  倒置 3D 爱心
-// ============================================================
+// 50,000 粒子。位置动画由 GPU Shader 完成，CPU 不再逐帧重写 15 万个浮点数。
+const COUNT = 50000, SC = 0.72;
 const geo = new THREE.BufferGeometry();
-const pos = new Float32Array(particleCount * 3);
-const col = new Float32Array(particleCount * 3);
-const sizes = new Float32Array(particleCount);
+const pos = new Float32Array(COUNT * 3);
+const burstPos = new Float32Array(COUNT * 3);
+const textPos = new Float32Array(COUNT * 3);
+const col = new Float32Array(COUNT * 3);
+const sizes = new Float32Array(COUNT);
+const seeds = new Float32Array(COUNT);
+const delays = new Float32Array(COUNT);
 
-let idx = 0;
-const pink = new THREE.Color('#ff5ccf');
-const blue = new THREE.Color('#01cdfe');
-const purple = new THREE.Color('#b794f4');
-const warmPink = new THREE.Color('#ff50a5');
-const workingColor = new THREE.Color();
-while (idx < particleCount) {
-    const theta = Math.random() * Math.PI * 2;
-    const phi = Math.random() * Math.PI;
-    const rBase = 16 * Math.sin(phi) ** 3;
-    const x = rBase * Math.cos(theta);
-    let y = -(13 * Math.cos(phi) - 5 * Math.cos(2 * phi) - 2 * Math.cos(3 * phi) - Math.cos(4 * phi));
-    y = -y;
-    const archY = 0.5 * x * x + 10.5;
-    if (y > 9 && y > archY) continue;
-    const dist = Math.sqrt(x * x + y * y) / 15;
-    const thick = Math.sqrt(Math.max(0, 1 - dist * dist)) * 12;
-    const z = (Math.random() - 0.5) * thick;
-    const scale = 0.72;
-    pos[idx * 3] = x * scale;
-    pos[idx * 3 + 1] = y * scale;
-    pos[idx * 3 + 2] = z * scale * 0.9;
-    if (y > 0) {
-        const t = Math.min(1, y / 6);
-        workingColor.copy(blue).lerp(purple, t * 0.6);
-    } else {
-        const t = Math.min(1, -y / 8);
-        workingColor.copy(pink).lerp(warmPink, t * 0.7);
-    }
-    workingColor.multiplyScalar(0.85 + Math.random() * 0.3);
-    col[idx * 3] = workingColor.r;
-    col[idx * 3 + 1] = workingColor.g;
-    col[idx * 3 + 2] = workingColor.b;
-    sizes[idx] = 0.04 + Math.random() * 0.05;
-    if (Math.abs(z) < 2) sizes[idx] += 0.02;
-    idx++;
+const C1 = [0.01, 0.80, 1.0], C2 = [0.72, 0.58, 0.96], C3 = [1.0, 0.44, 0.81], C4 = [1.0, 0.42, 0.62];
+const lerp = (a, b, t) => [a[0]+(b[0]-a[0])*t, a[1]+(b[1]-a[1])*t, a[2]+(b[2]-a[2])*t];
+const hr = p => 16 * Math.pow(Math.sin(p), 3);
+const hy = p => 13*Math.cos(p) - 5*Math.cos(2*p) - 2*Math.cos(3*p) - Math.cos(4*p);
+
+let i = 0, it = 0;
+while (i < COUNT && it < COUNT * 3) {
+    const th = Math.random() * Math.PI * 2, ph = Math.random() * Math.PI;
+    const x = hr(ph) * Math.cos(th), y = hy(ph);
+    if (y > 9.5 && y > 0.55*x*x + 10.8) { it++; continue; }
+    const d = Math.sqrt(x*x + y*y) / 15;
+    const z = (Math.random() - 0.5) * Math.sqrt(Math.max(0, 1 - d*d)) * 12;
+    const i3 = i * 3;
+    pos[i3] = x*SC; pos[i3+1] = y*SC; pos[i3+2] = z*SC*0.9;
+
+    const t = Math.min(1, Math.abs(y) / 7);
+    const c = y > 0 ? lerp(C1, C2, t*0.65) : lerp(C3, C4, t*0.75);
+    const br = 1.35 + Math.random()*0.55;
+    col[i3]=c[0]*br; col[i3+1]=c[1]*br; col[i3+2]=c[2]*br;
+    sizes[i] = 0.035 + Math.random()*0.045;
+    if (Math.abs(z) < 2.5) sizes[i] += 0.015;
+    if (Math.abs(z) < 0.5) sizes[i] += 0.01;
+    seeds[i] = Math.random();
+    delays[i] = Math.random();
+    i++; it++;
 }
 
+// 预生成一次爆炸目标；后续插值、延迟和旋涡全部在 GPU 内完成。
+for (let n = 0; n < COUNT; n++) {
+    const n3 = n * 3;
+    const x = pos[n3], y = pos[n3+1], z = pos[n3+2];
+    const len = Math.hypot(x, y, z) || 1;
+    let dx = x / len + (Math.random() - 0.5) * 0.86;
+    let dy = y / len + (Math.random() - 0.42) * 0.88;
+    let dz = z / len + (Math.random() - 0.5) * 1.18;
+    const dl = Math.hypot(dx, dy, dz) || 1;
+    dx /= dl; dy /= dl; dz /= dl;
+    const power = 4.6 + Math.random() * 8.2;
+    burstPos[n3]   = x + dx * power;
+    burstPos[n3+1] = y + dy * power + Math.random() * 1.35;
+    burstPos[n3+2] = z + dz * power;
+}
+
+// V3：把文字先画到离屏 Canvas，再从像素中采样 3D 目标点。
+// 修改这里即可更换情书内容；英文在各平台字体兼容性最稳定。
+const LOVE_TEXT = 'I LOVE YOU';
+function buildTextTargets(message) {
+    const tc = document.createElement('canvas');
+    tc.width = 1220; tc.height = 300;
+    const tx = tc.getContext('2d', { willReadFrequently: true });
+    tx.clearRect(0, 0, tc.width, tc.height);
+    tx.fillStyle = '#fff';
+    tx.textAlign = 'center';
+    tx.textBaseline = 'middle';
+    tx.font = '900 194px Arial, Helvetica, sans-serif';
+    tx.fillText(message, tc.width/2, tc.height/2 + 4);
+    const data = tx.getImageData(0, 0, tc.width, tc.height).data;
+    const pts = [];
+    const step = 4;
+    for (let y=0; y<tc.height; y+=step) {
+        for (let x=0; x<tc.width; x+=step) {
+            if (data[(y*tc.width+x)*4+3] > 100) pts.push([x,y]);
+        }
+    }
+    if (!pts.length) return;
+    // 打乱采样顺序，让邻近的原始粒子不会形成规则条纹。
+    for (let k=pts.length-1; k>0; k--) {
+        const j=(Math.random()*(k+1))|0; [pts[k],pts[j]]=[pts[j],pts[k]];
+    }
+    const sx = 12.4 / tc.width;
+    const sy = sx;
+    for (let n=0; n<COUNT; n++) {
+        const p = pts[n % pts.length];
+        const n3=n*3;
+        textPos[n3]   = (p[0]-tc.width/2)*sx + (Math.random()-0.5)*0.052;
+        textPos[n3+1] = (tc.height/2-p[1])*sy + (Math.random()-0.5)*0.052;
+        textPos[n3+2] = (Math.random()-0.5)*0.62;
+    }
+}
+buildTextTargets(LOVE_TEXT);
+
 geo.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+geo.setAttribute('aBurstPosition', new THREE.BufferAttribute(burstPos, 3));
+geo.setAttribute('aTextPosition', new THREE.BufferAttribute(textPos, 3));
 geo.setAttribute('color', new THREE.BufferAttribute(col, 3));
 geo.setAttribute('size', new THREE.BufferAttribute(sizes, 1));
+geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+geo.setAttribute('aDelay', new THREE.BufferAttribute(delays, 1));
+geo.computeBoundingSphere();
 
-const vertexShader = `
-    attribute float size;
-    attribute vec3 color;
-    varying vec3 vColor;
-    void main() {
-        vColor = color;
-        vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
-        gl_PointSize = size * (280.0 / -mvPosition.z);
-        gl_Position = projectionMatrix * mvPosition;
-    }
-`;
-const fragmentShader = `
-    varying vec3 vColor;
-    void main() {
-        float d = distance(gl_PointCoord, vec2(0.5));
-        if (d > 0.5) discard;
-        float alpha = 1.0 - smoothstep(0.0, 0.5, d);
-        float glow = exp(-d * 6.0);
-        vec3 color = vColor + vec3(0.25, 0.05, 0.0) * glow * 0.25;
-        gl_FragColor = vec4(color, alpha * 0.85);
-    }
-`;
-const particleMat = new THREE.ShaderMaterial({
-    vertexShader, fragmentShader,
-    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+const heartU = {
+    uTime: { value: 0 },
+    uPhase: { value: 0 },       // 0 idle, 1 charge, 2 burst, 3 hold, 4 text, 5 textHold, 6 return, 7 beat
+    uProgress: { value: 0 },
+    uFlash: { value: 0 },
+    uEnergy: { value: 0 },
+    uTextGlow: { value: 0 }
+};
+
+const heartMat = new THREE.ShaderMaterial({
+    uniforms: heartU,
+    transparent: true,
+    depthWrite: false,
+    blending: THREE.AdditiveBlending,
+    vertexShader: `
+        attribute float size;
+        attribute vec3 color;
+        attribute vec3 aBurstPosition;
+        attribute vec3 aTextPosition;
+        attribute float aSeed;
+        attribute float aDelay;
+        varying vec3 vC;
+        varying float vSpark;
+        uniform float uTime;
+        uniform float uPhase;
+        uniform float uProgress;
+        uniform float uFlash;
+        uniform float uEnergy;
+        uniform float uTextGlow;
+
+        float easeOutCubic(float t) { return 1.0 - pow(1.0 - t, 3.0); }
+        float easeInOutCubic(float t) {
+            return t < 0.5 ? 4.0*t*t*t : 1.0 - pow(-2.0*t + 2.0, 3.0) / 2.0;
+        }
+        mat2 rot(float a) { float c=cos(a), s=sin(a); return mat2(c,-s,s,c); }
+
+        void main() {
+            vC = color;
+            vSpark = step(0.86, aSeed);
+            vec3 p = position;
+            float burstMix = 0.0;
+
+            if (uPhase > 1.5 && uPhase < 2.5) {
+                // 0~约 90ms 的粒子延迟，让爆炸不是整块一起放大。
+                float localP = clamp((uProgress - aDelay * 0.13) / 0.87, 0.0, 1.0);
+                burstMix = easeOutCubic(localP);
+                p = mix(position, aBurstPosition, burstMix);
+            } else if (uPhase > 2.5 && uPhase < 3.5) {
+                burstMix = 1.0;
+                p = aBurstPosition;
+                float drift = sin(uTime * (1.5 + aSeed) + aSeed * 19.0) * 0.08;
+                p += normalize(aBurstPosition + vec3(0.01)) * drift;
+            } else if (uPhase > 3.5 && uPhase < 4.5) {
+                // 爆炸星尘向文字聚拢，途中带一点弧线，像在宇宙中写字。
+                float localP = clamp((uProgress - aDelay * 0.12) / 0.88, 0.0, 1.0);
+                float m = easeInOutCubic(localP);
+                p = mix(aBurstPosition, aTextPosition, m);
+                float arc = sin(m * 3.14159265);
+                p.y += arc * (aSeed - 0.5) * 1.5;
+                p.xz = rot(arc * (aSeed - 0.5) * 1.8) * p.xz;
+            } else if (uPhase > 4.5 && uPhase < 5.5) {
+                // 文字停留时保留细微呼吸和深度闪烁。
+                p = aTextPosition;
+                p.z += sin(uTime*2.2 + aSeed*20.0) * 0.055;
+            } else if (uPhase > 5.5 && uPhase < 6.5) {
+                float localP = clamp((uProgress - aDelay * 0.08) / 0.92, 0.0, 1.0);
+                float back = easeInOutCubic(localP);
+                p = mix(aTextPosition, position, back);
+
+                // 从文字吸回爱心：绕 Y 轴旋涡重构，末端严格回到原坐标。
+                float swirl = sin(back * 3.14159265);
+                float turns = (0.62 + aSeed * 1.0) * 6.2831853;
+                p.xz = rot(swirl * turns) * p.xz;
+                p.y += sin((back * 3.2 + aSeed * 5.0) * 6.2831853) * swirl * 0.24;
+            }
+
+            // 少量英雄粒子在能量阶段变大；文字阶段整体略放大以增强可读性。
+            float hero = vSpark * (0.55 + uEnergy * 1.65);
+            float textBoost = uTextGlow * 0.30;
+            vec4 mv = modelViewMatrix * vec4(p, 1.0);
+            float pointScale = 1.0 + uFlash * 0.75 + hero * uEnergy + textBoost;
+            gl_PointSize = size * pointScale * (300.0 / max(0.5, -mv.z));
+            gl_Position = projectionMatrix * mv;
+        }`,
+    fragmentShader: `
+        varying vec3 vC;
+        varying float vSpark;
+        uniform float uTime;
+        uniform float uFlash;
+        uniform float uEnergy;
+        uniform float uTextGlow;
+        void main() {
+            float d = distance(gl_PointCoord, vec2(0.5));
+            if (d > 0.5) discard;
+            float a = 1.0 - smoothstep(0.0, 0.49, d);
+            float g = exp(-d * 6.0);
+            float shimmer = 1.02 + sin(uTime*1.5 + vC.r*20.0)*0.04;
+            vec3 c = vC + vec3(0.5, 0.25, 0.7)*g*0.55;
+            c = mix(c, vec3(1.0, 0.91, 1.0), clamp(uFlash, 0.0, 1.0) * 0.82);
+            c += vec3(0.55, 0.20, 0.65) * vSpark * uEnergy * 0.75;
+            c = mix(c, vec3(1.0, 0.68, 0.91) + vec3(g*0.22), clamp(uTextGlow,0.0,1.0)*0.72);
+            gl_FragColor = vec4(c, a * shimmer * (1.0 + uEnergy*0.12));
+        }`
 });
-const heart = new THREE.Points(geo, particleMat);
+
+const heart = new THREE.Points(geo, heartMat);
 heart.position.y = 0.8;
 scene.add(heart);
 
+// 星空
+const SC2 = 900;
+const sg = new THREE.BufferGeometry();
+const sp = new Float32Array(SC2*3), ss = new Float32Array(SC2), sc = new Float32Array(SC2*3);
+for (let n=0; n<SC2; n++) {
+    const r = 12+Math.random()*35, ta = Math.random()*Math.PI*2, pa = Math.acos(2*Math.random()-1);
+    sp[n*3]=r*Math.sin(pa)*Math.cos(ta); sp[n*3+1]=r*Math.cos(pa)*0.55; sp[n*3+2]=r*Math.sin(pa)*Math.sin(ta)-8;
+    ss[n] = 0.015+Math.random()*0.07;
+    const tc = Math.random()*0.4;
+    sc[n*3]=0.27+tc*0.26; sc[n*3+1]=0.27+tc*0.13; sc[n*3+2]=0.53+tc*0.47;
+}
+sg.setAttribute('position', new THREE.BufferAttribute(sp, 3));
+sg.setAttribute('size', new THREE.BufferAttribute(ss, 1));
+sg.setAttribute('color', new THREE.BufferAttribute(sc, 3));
+const starU = { uGlow: { value: 0 } };
+const stars = new THREE.Points(sg, new THREE.ShaderMaterial({
+    uniforms: starU,
+    transparent: true, depthWrite: false, blending: THREE.AdditiveBlending,
+    vertexShader: `attribute float size; attribute vec3 color; varying vec3 vC; uniform float uGlow; void main(){vC=color; vec4 mv=modelViewMatrix*vec4(position,1.0); gl_PointSize=size*(1.0+uGlow*0.7)*(220.0/max(0.5,-mv.z)); gl_Position=projectionMatrix*mv;}`,
+    fragmentShader: `varying vec3 vC; uniform float uGlow; void main(){float d=distance(gl_PointCoord,vec2(0.5)); if(d>0.5)discard; vec3 c=vC*(1.0+uGlow*2.1); gl_FragColor=vec4(c,exp(-d*8.0)*(0.4+uGlow*0.24));}`
+}));
+scene.add(stars);
 
-// --- 动画 ---
+// 原有氛围光环
+const gg = new THREE.RingGeometry(2.5, 6, 64);
+const gu = { uTime: { value: 0 } };
+const gm = new THREE.Mesh(gg, new THREE.ShaderMaterial({
+    uniforms: gu, transparent: true, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending,
+    vertexShader: `varying vec2 vUv; void main(){vUv=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+    fragmentShader: `varying vec2 vUv; uniform float uTime; void main(){float d=length(vUv-0.5)*2.0; float a=exp(-d*2.5)*0.07+sin(uTime*0.3)*0.015; gl_FragColor=vec4(0.27,0.13,0.67,a);}`
+}));
+gm.position.set(0, -3.2, -2); gm.rotation.x = -0.3; scene.add(gm);
+
+// 爆炸冲击波：薄环快速扩张并淡出。
+const shock = new THREE.Mesh(
+    new THREE.RingGeometry(0.92, 1.0, 128),
+    new THREE.MeshBasicMaterial({ color: 0xffa6ec, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide, blending: THREE.AdditiveBlending })
+);
+shock.position.set(0, 0.8, 0.25);
+shock.scale.setScalar(0.05);
+shock.visible = false;
+scene.add(shock);
+
+// 中心白光，用程序生成的径向渐变纹理，不依赖额外图片。
+const glowCanvas = document.createElement('canvas');
+glowCanvas.width = glowCanvas.height = 128;
+const gctx = glowCanvas.getContext('2d');
+const grad = gctx.createRadialGradient(64,64,0,64,64,64);
+grad.addColorStop(0, 'rgba(255,255,255,1)');
+grad.addColorStop(0.18, 'rgba(255,220,247,.92)');
+grad.addColorStop(0.48, 'rgba(255,105,210,.30)');
+grad.addColorStop(1, 'rgba(120,70,255,0)');
+gctx.fillStyle = grad; gctx.fillRect(0,0,128,128);
+const glowTex = new THREE.CanvasTexture(glowCanvas);
+const flashSprite = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTex, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+flashSprite.position.set(0, 0.8, 1.0);
+flashSprite.scale.set(0.1,0.1,1);
+scene.add(flashSprite);
+
 const clock = new THREE.Clock();
-let animationFrameId = 0;
-let running = false;
-function animate() {
-    if (!running) return;
-    animationFrameId = requestAnimationFrame(animate);
-    const time = clock.getElapsedTime();
-    const breathe = 1 + Math.sin(time * 0.4) * 0.003;
-    heart.scale.set(breathe, breathe, breathe);
-    controls.update();
-    renderer.render(scene, camera);
+let burstState = 'idle';
+let burstStart = 0;
+let shake = 0;
+let hidden = false;
+
+// V3.4：文字与爱心收束始终正视，同时锁定点击瞬间的镜头距离；剧情期间只改角度、不改视觉大小。
+const savedCameraPos = new THREE.Vector3();
+const savedTarget = new THREE.Vector3();
+const frontCameraPos = new THREE.Vector3(0, 1.5, 12);
+const frontTarget = new THREE.Vector3(0, 0.3, 0);
+const camTargetTmp = new THREE.Vector3();
+const savedOffset = new THREE.Vector3();
+const frontOffset = new THREE.Vector3();
+const camDirTmp = new THREE.Vector3();
+const storyQuat = new THREE.Quaternion();
+const storyStepQuat = new THREE.Quaternion();
+let savedRadius = 12, frontRadius = 12;
+
+function prepareStoryCamera() {
+    savedOffset.subVectors(savedCameraPos, savedTarget);
+    frontOffset.subVectors(frontCameraPos, frontTarget);
+    savedRadius = savedOffset.length();
+
+    // V3.4：正面视角沿用“点击那一刻”的镜头距离。
+    // 这样从当前 3D 角度转到正面、文字成形、爱心重聚、再恢复旋转的全过程，
+    // 都只改变观察方向，不发生缩近/拉远，聚合后的爱心视觉大小与点击时一致。
+    frontRadius = savedRadius;
+
+    storyQuat.setFromUnitVectors(
+        camDirTmp.copy(savedOffset).normalize(),
+        frontOffset.clone().normalize()
+    );
 }
-function startAnimation() {
-    if (running) return;
-    running = true;
-    clock.start();
-    animate();
+
+function setStoryCamera(blendToFront) {
+    const k = clamp01(blendToFront);
+    camTargetTmp.lerpVectors(savedTarget, frontTarget, k);
+    storyStepQuat.identity().slerp(storyQuat, k);
+    camDirTmp.copy(savedOffset).normalize().applyQuaternion(storyStepQuat);
+    const radius = THREE.MathUtils.lerp(savedRadius, frontRadius, k);
+    camera.position.copy(camTargetTmp).addScaledVector(camDirTmp, radius);
+    controls.target.copy(camTargetTmp);
+    camera.up.set(0, 1, 0);
+    camera.lookAt(camTargetTmp);
 }
-function stopAnimation() {
-    running = false;
-    cancelAnimationFrame(animationFrameId);
-    animationFrameId = 0;
-    clock.stop();
+
+// V3.6：爱心聚合完成后不再恢复点击前角度。
+// 直接从当前正面姿态继续自动旋转；旋转从较低速度起步并平滑衔接到正常速度，不再加入聚合后的心跳缩放。
+const DUR = { charge: 0.18, out: 0.70, hold: 0.22, text: 0.95, textHold: 1.10, back: 1.36, release: 1.10 };
+const easeOutCubic = t => 1 - Math.pow(1 - t, 3);
+const easeInOutCubic = t => t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t + 2, 3) / 2;
+const smootherStep = t => { t = clamp01(t); return t*t*t*(t*(t*6 - 15) + 10); };
+const clamp01 = v => Math.max(0, Math.min(1, v));
+
+function setState(state, el) {
+    burstState = state;
+    burstStart = el;
+    const phaseMap = { idle:0, charge:1, out:2, hold:3, text:4, textHold:5, back:6, release:0 };
+    heartU.uPhase.value = phaseMap[state] ?? 0;
+    heartU.uProgress.value = 0;
 }
-document.addEventListener('visibilitychange', () => {
-    if (document.hidden) stopAnimation();
-    else startAnimation();
-});
-renderer.domElement.addEventListener('webglcontextlost', (event) => {
-    event.preventDefault();
-    stopAnimation();
-    const loading = document.getElementById('loading');
-    loading.classList.remove('hide');
-    loading.querySelector('p').textContent = '当前设备无法继续显示 3D 爱心';
-});
-startAnimation();
 
-// --- 加载完成 ---
-document.getElementById('loading').classList.add('hide');
-
-// --- 响应式 ---
-window.addEventListener('resize', () => {
-    const w = window.innerWidth, h = window.innerHeight;
-    camera.aspect = w / h;
-    camera.updateProjectionMatrix();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio, pixelRatioLimit));
-    renderer.setSize(w, h);
-});
-
-// 触摸自动旋转控制
-let idleTimer = null;
-function onUserInteract() { controls.autoRotate = false; clearTimeout(idleTimer); }
-function onUserRelease() {
-    clearTimeout(idleTimer);
-    idleTimer = setTimeout(() => { controls.autoRotate = true; }, 3500);
+function triggerBurst() {
+    if (burstState !== 'idle') return;
+    savedCameraPos.copy(camera.position);
+    savedTarget.copy(controls.target);
+    prepareStoryCamera();
+    controls.autoRotate = false;
+    controls.enabled = false;
+    clearTimeout(tmr);
+    setState('charge', clock.getElapsedTime());
+    if (navigator.vibrate) navigator.vibrate(18);
 }
-document.body.addEventListener('touchstart', onUserInteract, { passive: true });
-document.body.addEventListener('touchend', onUserRelease, { passive: true });
-document.body.addEventListener('mousedown', onUserInteract);
-document.body.addEventListener('mouseup', onUserRelease);
 
-// 阻止页面滚动
-document.body.addEventListener('touchmove', (e) => e.preventDefault(), { passive: false });
+function updateBurst(el) {
+    heartU.uFlash.value = 0;
+    heartU.uEnergy.value = 0;
+    heartU.uTextGlow.value = 0;
+    starU.uGlow.value *= 0.90;
+    burstLight.intensity *= 0.82;
+    flashSprite.material.opacity *= 0.78;
 
-console.log('❤️ 3D 爱心已启动 — 可添加到桌面使用');
-</script>
-<script>
-window.addEventListener('load', () => {
-    if ('serviceWorker' in navigator) {
-        navigator.serviceWorker.register('./service-worker.js')
-            .catch((error) => console.warn('Service Worker 注册失败，当前页面仍可联网使用。', error));
+    if (burstState === 'idle') {
+        heart.scale.setScalar(1 + Math.sin(el*0.45)*0.006);
+        heartU.uProgress.value = 0;
+        return;
     }
+
+    const t = el - burstStart;
+
+    if (burstState === 'charge') {
+        const p = clamp01(t / DUR.charge);
+        const e = easeOutCubic(p);
+        heartU.uProgress.value = p;
+        heartU.uFlash.value = Math.pow(p, 3) * 0.72;
+        heartU.uEnergy.value = p * 0.34;
+        heart.scale.setScalar(1 - 0.052 * e);
+        burstLight.intensity = p * 1.5;
+        flashSprite.material.opacity = p * 0.16;
+        flashSprite.scale.setScalar(1.2 + p*1.5);
+        if (p >= 1) {
+            setState('out', el);
+            shock.visible = true;
+            shock.scale.setScalar(0.08);
+            shock.material.opacity = 0.9;
+            flashSprite.material.opacity = 0.95;
+            flashSprite.scale.setScalar(1.8);
+            burstLight.intensity = 4.0;
+            shake = 1.0;
+        }
+    } else if (burstState === 'out') {
+        const p = clamp01(t / DUR.out);
+        const e = easeOutCubic(p);
+        heartU.uProgress.value = p;
+        heartU.uFlash.value = (1-p) * 0.95;
+        heartU.uEnergy.value = 1.0 - p*0.24;
+        heart.scale.setScalar(0.96 + e*0.105);
+        starU.uGlow.value = Math.max(starU.uGlow.value, (1-p)*0.95 + 0.16);
+        burstLight.intensity = (1-p) * 3.8;
+
+        const sw = easeOutCubic(p);
+        shock.scale.setScalar(0.12 + sw * 8.6);
+        shock.material.opacity = Math.pow(1-p, 1.7) * 0.82;
+        flashSprite.material.opacity = Math.pow(1-p, 2.2) * 0.86;
+        flashSprite.scale.setScalar(1.8 + p*5.5);
+        shake = Math.max(shake, (1-p) * 0.88);
+        if (p >= 1) {
+            shock.visible = false;
+            setState('hold', el);
+        }
+    } else if (burstState === 'hold') {
+        const p = clamp01(t / DUR.hold);
+        heartU.uProgress.value = p;
+        heartU.uEnergy.value = 0.62 - p*0.12;
+        starU.uGlow.value = Math.max(starU.uGlow.value, 0.18);
+        heart.scale.setScalar(1.055 - p*0.012);
+        if (p >= 1) setState('text', el);
+    } else if (burstState === 'text') {
+        const p = clamp01(t / DUR.text);
+        // 文字成形时把镜头平滑拉到正面；前半段完成镜头归正，后半段专注于显字。
+        setStoryCamera(easeInOutCubic(clamp01(p / 0.48)));
+        heartU.uProgress.value = p;
+        heartU.uEnergy.value = (1-p)*0.28 + 0.12;
+        heartU.uTextGlow.value = easeInOutCubic(p);
+        starU.uGlow.value = Math.max(starU.uGlow.value, 0.14 + p*0.12);
+        heart.scale.setScalar(1.035 - p*0.035);
+        flashSprite.material.opacity = Math.sin(Math.PI*p)*0.10;
+        flashSprite.scale.setScalar(2.0 + p*1.8);
+        if (p >= 1) setState('textHold', el);
+    } else if (burstState === 'textHold') {
+        const p = clamp01(t / DUR.textHold);
+        // 停留期间严格保持正面、水平、无镜像，确保文字一眼可读。
+        setStoryCamera(1);
+        heartU.uProgress.value = p;
+        heartU.uTextGlow.value = 0.92 + Math.sin(el*3.2)*0.08;
+        starU.uGlow.value = Math.max(starU.uGlow.value, 0.22);
+        heart.scale.setScalar(1 + Math.sin(el*2.0)*0.006);
+        if (p >= 1) setState('back', el);
+    } else if (burstState === 'back') {
+        const p = clamp01(t / DUR.back);
+        // V3.2：整个重聚过程都保持正视角，让 I LOVE YOU 收束成爱心时始终可读、可感知。
+        setStoryCamera(1);
+        heartU.uProgress.value = p;
+        heartU.uEnergy.value = (1-p) * 0.58;
+        heartU.uTextGlow.value = 1-p;
+        starU.uGlow.value = Math.max(starU.uGlow.value, (1-p)*0.24);
+        heart.scale.setScalar(1.0);
+        // 临近完全聚合时再出现一次核心光，强化“吸回完成”。
+        const finishGlow = clamp01((p - 0.82) / 0.18);
+        heartU.uFlash.value = finishGlow * 0.42;
+        flashSprite.material.opacity = finishGlow * (1-p) * 1.8;
+        flashSprite.scale.setScalar(0.9 + (1-p)*2.0);
+        burstLight.intensity = finishGlow * (1-p) * 3.0;
+        if (p >= 1) {
+            // V3.6：聚合完成时保持当前正面角度，不再回到点击前的旧角度。
+            // 立即把控制权交还给 OrbitControls，并从当前正面姿态继续往同一方向旋转。
+            setStoryCamera(1);
+            controls.enabled = true;
+            controls.autoRotate = true;
+            controls.autoRotateSpeed = AUTO_ROTATE_SPEED * 0.32;
+            setState('release', el);
+        }
+    } else if (burstState === 'release') {
+        const p = clamp01(t / DUR.release);
+
+        // 从正面直接继续转：不回旧角度、不停住。
+        // 初始已有 32% 正常速度，随后平滑升到 100%，避免突然加速。
+        controls.autoRotateSpeed = AUTO_ROTATE_SPEED * (0.32 + 0.68 * smootherStep(p));
+        heartU.uProgress.value = 0;
+        heartU.uTextGlow.value = 0;
+
+        // 聚合完成后不再跳动：保持稳定尺寸，只让旋转速度平滑接管。
+        heart.scale.setScalar(1.0);
+        heartU.uFlash.value = 0;
+        starU.uGlow.value = Math.max(starU.uGlow.value, (1-p)*0.08);
+
+        if (p >= 1) {
+            controls.autoRotateSpeed = AUTO_ROTATE_SPEED;
+            setState('idle', el);
+        }
+    }
+}
+
+function animate() {
+    requestAnimationFrame(animate);
+    if (hidden) return;
+
+    const dt = Math.min(clock.getDelta(), 0.1), el = clock.getElapsedTime();
+    updateBurst(el);
+    heartU.uTime.value = el;
+    gu.uTime.value = el;
+
+    const starSpeed = burstState === 'out' ? 0.30 : burstState === 'text' ? 0.18 : burstState === 'textHold' ? 0.07 : burstState === 'back' ? 0.19 : burstState === 'release' ? 0.11 : 0.12;
+    stars.rotation.y += dt * starSpeed;
+    stars.rotation.x += dt * (burstState === 'out' ? 0.07 : 0.03);
+
+    controls.update();
+
+    // 极轻微 Camera Shake，只影响当前渲染帧，不污染 OrbitControls 的相机状态。
+    let sx=0, sy=0, sz=0;
+    if (shake > 0.002) {
+        const amp = 0.055 * shake;
+        sx=(Math.random()-0.5)*amp; sy=(Math.random()-0.5)*amp; sz=(Math.random()-0.5)*amp*0.35;
+        camera.position.x += sx; camera.position.y += sy; camera.position.z += sz;
+        shake *= 0.84;
+    }
+
+    renderer.render(scene, camera);
+    if (sx || sy || sz) { camera.position.x -= sx; camera.position.y -= sy; camera.position.z -= sz; }
+}
+
+requestAnimationFrame(() => {
+    document.getElementById('loading').classList.add('hide');
+    setTimeout(() => { const e = document.getElementById('loading'); if (e) e.remove(); }, 850);
 });
+animate();
+
+setTimeout(() => { const h = document.getElementById('install-hint'); if (h) h.style.opacity='0'; }, 11000);
+
+addEventListener('resize', () => {
+    camera.aspect=innerWidth/innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setPixelRatio(Math.min(devicePixelRatio, 2.25));
+    renderer.setSize(innerWidth,innerHeight);
+}, {passive:true});
+
+// 只在“真正轻点到爱心”时触发；拖动旋转不会误爆。
+const raycaster = new THREE.Raycaster();
+raycaster.params.Points.threshold = 0.24;
+const pointer = new THREE.Vector2();
+let tapX = 0, tapY = 0, tapMoved = false;
+
+renderer.domElement.addEventListener('pointerdown', e => {
+    tapX = e.clientX; tapY = e.clientY; tapMoved = false;
+}, {passive:true});
+renderer.domElement.addEventListener('pointermove', e => {
+    if (Math.hypot(e.clientX - tapX, e.clientY - tapY) > 10) tapMoved = true;
+}, {passive:true});
+renderer.domElement.addEventListener('pointerup', e => {
+    if (tapMoved || burstState !== 'idle') return;
+    pointer.x = (e.clientX / innerWidth) * 2 - 1;
+    pointer.y = -(e.clientY / innerHeight) * 2 + 1;
+    raycaster.setFromCamera(pointer, camera);
+    if (raycaster.intersectObject(heart, false).length) triggerBurst();
+}, {passive:true});
+
+let tmr=null;
+const onI = () => { controls.autoRotate=false; clearTimeout(tmr); };
+const onR = () => {
+    clearTimeout(tmr);
+    tmr=setTimeout(() => { if (burstState === 'idle') controls.autoRotate=true; }, 3000);
+};
+['touchstart','mousedown'].forEach(e=>document.body.addEventListener(e,onI,{passive:true}));
+['touchend','mouseup'].forEach(e=>document.body.addEventListener(e,onR,{passive:true}));
+document.body.addEventListener('touchmove', e=>e.preventDefault(), {passive:false});
+
+document.addEventListener('visibilitychange', () => {
+    hidden = document.hidden;
+    if (!hidden) clock.getDelta();
+});
+
+console.log('%c❤️ 3D 爱心 V3.9','color:#ff71ce;font-size:18px;','— 更大情书 · 疏散星尘 · 连续旋转 · '+LOVE_TEXT);
 </script>
 </body>
 </html>
