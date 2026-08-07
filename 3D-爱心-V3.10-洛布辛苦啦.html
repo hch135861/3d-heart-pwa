@@ -103,7 +103,7 @@ function calcHeartScaleForScreen() {
     const fitSC = (visibleWidth * HEART_TARGET_SCREEN_FILL) / 32; // 心形参数横向理论宽度约 32
     return Math.max(HEART_BASE_SC, fitSC); // 只放大，不再缩小
 }
-const SC = calcHeartScaleForScreen(); // 只作用于爱心坐标，文字 textPos 保持原尺寸
+const HEART_SC = calcHeartScaleForScreen(); // 爱心专用缩放；与文字尺寸彻底分离
 const geo = new THREE.BufferGeometry();
 const pos = new Float32Array(COUNT * 3);
 const burstPos = new Float32Array(COUNT * 3);
@@ -126,7 +126,7 @@ while (i < COUNT && it < COUNT * 3) {
     const d = Math.sqrt(x*x + y*y) / 15;
     const z = (Math.random() - 0.5) * Math.sqrt(Math.max(0, 1 - d*d)) * 12;
     const i3 = i * 3;
-    pos[i3] = x*SC; pos[i3+1] = y*SC; pos[i3+2] = z*SC*0.9;
+    pos[i3] = x*HEART_SC; pos[i3+1] = y*HEART_SC; pos[i3+2] = z*HEART_SC*0.9;
 
     const t = Math.min(1, Math.abs(y) / 7);
     const c = y > 0 ? lerp(C1, C2, t*0.65) : lerp(C3, C4, t*0.75);
@@ -156,6 +156,7 @@ for (let n = 0; n < COUNT; n++) {
 }
 
 const LOVE_TEXT = '洛布辛苦啦';
+const TEXT_FIXED_WORLD_WIDTH = 12.4; // 固定为当前最小文字尺寸，永不跟随爱心缩放
 function buildTextTargets(message) {
     const tc = document.createElement('canvas');
     tc.width = 1220; tc.height = 300;
@@ -178,7 +179,7 @@ function buildTextTargets(message) {
     for (let k=pts.length-1; k>0; k--) {
         const j=(Math.random()*(k+1))|0; [pts[k],pts[j]]=[pts[j],pts[k]];
     }
-    const sx = 12.4 / tc.width;
+    const sx = TEXT_FIXED_WORLD_WIDTH / tc.width; // 文字只使用固定尺寸，不引用 HEART_SC
     const sy = sx;
     for (let n=0; n<COUNT; n++) {
         const p = pts[n % pts.length];
