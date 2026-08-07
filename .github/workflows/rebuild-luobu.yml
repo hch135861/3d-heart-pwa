@@ -1,0 +1,42 @@
+name: Rebuild Luobu 2-3 Version
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - '.github/workflows/rebuild-luobu.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Build standalone Luobu version
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+          src = Path('index.html').read_text(encoding='utf-8')
+          src = src.replace('I LOVE YOU', '洛布辛苦啦')
+          src = src.replace('<title>3D 爱心 · 粒子情书 V3.10</title>', '<title>3D 爱心 · 洛布辛苦啦</title>')
+          src = src.replace(
+              'const COUNT = 50000, SC = 0.576; // V3.10：爱心本体缩为 V3.9 的 80%',
+              'const COUNT = 50000, SC = 0.384; // 洛布版：爱心缩为 V3.10 的 2/3'
+          )
+          Path('3D-爱心-V3.10-洛布辛苦啦.html').write_text(src, encoding='utf-8')
+          PY
+      - name: Commit rebuilt standalone file
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add '3D-爱心-V3.10-洛布辛苦啦.html'
+          if git diff --cached --quiet; then
+            echo 'No changes to commit.'
+          else
+            git commit -m 'Rebuild 洛布辛苦啦 version with heart at two-thirds size'
+            git push
+          fi
