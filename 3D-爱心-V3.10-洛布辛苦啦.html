@@ -315,7 +315,7 @@ const camTargetTmp = new THREE.Vector3(); const savedOffset = new THREE.Vector3(
 const camDirTmp = new THREE.Vector3(); const storyQuat = new THREE.Quaternion(); const storyStepQuat = new THREE.Quaternion();
 let savedRadius = 12, frontRadius = 12;
 function prepareStoryCamera() {
-    savedOffset.subVectors(savedCameraPos, savedTarget); frontOffset.subVectors(frontCameraPos, frontTarget); savedRadius = savedOffset.length(); frontRadius = savedRadius;
+    savedOffset.subVectors(savedCameraPos, savedTarget); frontOffset.subVectors(frontCameraPos, frontTarget); savedRadius = savedOffset.length(); frontRadius = frontOffset.length(); // 文字阶段固定基准镜头距离，不继承爱心缩放后的距离
     storyQuat.setFromUnitVectors(camDirTmp.copy(savedOffset).normalize(), frontOffset.clone().normalize());
 }
 function setStoryCamera(blendToFront) {
@@ -356,10 +356,12 @@ function updateBurst(el) {
     } else if (burstState === 'text') {
         const p = clamp01(t / DUR.text); setStoryCamera(easeInOutCubic(clamp01(p / 0.48))); heartU.uProgress.value = p;
         heartU.uEnergy.value = (1-p)*0.28 + 0.12; heartU.uTextGlow.value = easeInOutCubic(p); starU.uGlow.value = Math.max(starU.uGlow.value, 0.14 + p*0.12);
-        heart.scale.setScalar(1.035 - p*0.035); flashSprite.material.opacity = Math.sin(Math.PI*p)*0.10; flashSprite.scale.setScalar(2.0 + p*1.8); if (p >= 1) setState('textHold', el);
+        heart.scale.setScalar(1.0); // 文字形成阶段固定整体缩放，避免文字跟随爱心放大
+        flashSprite.material.opacity = Math.sin(Math.PI*p)*0.10; flashSprite.scale.setScalar(2.0 + p*1.8); if (p >= 1) setState('textHold', el);
     } else if (burstState === 'textHold') {
         const p = clamp01(t / DUR.textHold); setStoryCamera(1); heartU.uProgress.value = p; heartU.uTextGlow.value = 0.92 + Math.sin(el*3.2)*0.08;
-        starU.uGlow.value = Math.max(starU.uGlow.value, 0.22); heart.scale.setScalar(1 + Math.sin(el*2.0)*0.006); if (p >= 1) setState('back', el);
+        starU.uGlow.value = Math.max(starU.uGlow.value, 0.22); heart.scale.setScalar(1.0); // 文字停留阶段保持截图基准大小
+        if (p >= 1) setState('back', el);
     } else if (burstState === 'back') {
         const p = clamp01(t / DUR.back); setStoryCamera(1); heartU.uProgress.value = p; heartU.uEnergy.value = (1-p) * 0.58; heartU.uTextGlow.value = 1-p;
         starU.uGlow.value = Math.max(starU.uGlow.value, (1-p)*0.24); heart.scale.setScalar(1.0); const finishGlow = clamp01((p - 0.82) / 0.18);
