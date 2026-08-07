@@ -1,0 +1,94 @@
+name: Upgrade 3D Heart to V3.10
+
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - ".github/workflows/upgrade-v310.yml"
+
+permissions:
+  contents: write
+
+jobs:
+  upgrade:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Apply V3.10 and PWA integration
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          from pathlib import Path
+
+          index = Path('index.html')
+          s = index.read_text(encoding='utf-8')
+
+          def replace_once(old, new, label):
+              global s
+              count = s.count(old)
+              if count != 1:
+                  raise SystemExit(f'{label}: expected exactly 1 match, found {count}')
+              s = s.replace(old, new, 1)
+
+          replace_once(
+              '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n    <title>3D 爱心 · 粒子情书 V3.9</title>',
+              '<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">\n    <meta name="apple-mobile-web-app-title" content="3D 爱心">\n    <link rel="manifest" href="./manifest.webmanifest">\n    <link rel="apple-touch-icon" href="./icons/apple-touch-icon.png">\n    <title>3D 爱心 · 粒子情书 V3.10</title>',
+              'head/PWA metadata'
+          )
+
+          replace_once(
+              '{ "imports": { "three": "https://unpkg.com/three@0.169.0/build/three.module.js", "three/addons/": "https://unpkg.com/three@0.169.0/examples/jsm/" } }',
+              '{ "imports": { "three": "./vendor/three.module.js", "three/addons/controls/OrbitControls.js": "./vendor/OrbitControls.js" } }',
+              'local Three.js importmap'
+          )
+
+          replace_once(
+              'const COUNT = 50000, SC = 0.72;',
+              'const COUNT = 50000, SC = 0.576; // V3.10：爱心本体缩为 V3.9 的 80%',
+              'heart scale'
+          )
+
+          replace_once(
+              "console.log('%c❤️ 3D 爱心 V3.9','color:#ff71ce;font-size:18px;','— 更大情书 · 疏散星尘 · 连续旋转 · '+LOVE_TEXT);",
+              "console.log('%c❤️ 3D 爱心 V3.10','color:#ff71ce;font-size:18px;','— 更大情书 · 疏散星尘 · 连续旋转 · '+LOVE_TEXT);",
+              'version log'
+          )
+
+          if "serviceWorker.register('./service-worker.js')" not in s:
+              marker = '</body>'
+              if s.count(marker) != 1:
+                  raise SystemExit('body marker not unique')
+              sw = '''<script>\nwindow.addEventListener('load', () => {\n    if ('serviceWorker' in navigator) {\n        navigator.serviceWorker.register('./service-worker.js')\n            .catch((error) => console.warn('Service Worker 注册失败，当前页面仍可联网使用。', error));\n    }\n});\n</script>\n'''
+              s = s.replace(marker, sw + marker, 1)
+
+          index.write_text(s, encoding='utf-8')
+
+          sw_file = Path('service-worker.js')
+          sw = sw_file.read_text(encoding='utf-8')
+          old_cache = "const CACHE_NAME = 'heart-pwa-v1';"
+          new_cache = "const CACHE_NAME = 'heart-pwa-v310';"
+          if sw.count(old_cache) != 1:
+              raise SystemExit(f'cache version: expected 1 match, found {sw.count(old_cache)}')
+          sw_file.write_text(sw.replace(old_cache, new_cache, 1), encoding='utf-8')
+          PY
+
+      - name: Verify V3.10 markers
+        run: |
+          grep -F '粒子情书 V3.10' index.html
+          grep -F 'SC = 0.576' index.html
+          grep -F './vendor/three.module.js' index.html
+          grep -F "serviceWorker.register('./service-worker.js')" index.html
+          grep -F "heart-pwa-v310" service-worker.js
+
+      - name: Commit upgrade
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add index.html service-worker.js
+          git commit -m "Deploy 3D Heart V3.10" || exit 0
+          git push origin HEAD:main
