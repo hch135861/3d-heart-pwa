@@ -1,0 +1,17 @@
+{
+  "id": "./luobu.html",
+  "name": "洛布辛苦啦 · 3D 爱心",
+  "short_name": "洛布辛苦啦",
+  "description": "送给洛布的离线粒子爱心与专属心意",
+  "lang": "zh-CN",
+  "start_url": "./luobu.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#050510",
+  "theme_color": "#050510",
+  "icons": [
+    { "src": "./icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "./icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}
