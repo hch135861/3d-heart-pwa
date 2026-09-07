@@ -32,14 +32,14 @@ self.addEventListener('fetch', (event) => {
     const url = new URL(request.url);
     if (request.method !== 'GET' || url.origin !== self.location.origin) return;
 
-    // 页面导航优先联网，失败时再回退到离线缓存，保证发布新版本后尽快生效。
+    // 页面导航优先联网，失败时再回退到离线缓存，发布新版本后可尽快生效。
     if (request.mode === 'navigate') {
         event.respondWith(
             fetch(request)
                 .then((response) => {
                     if (response && response.ok) {
                         const copy = response.clone();
-                        event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy)));
+                        caches.open(CACHE_NAME).then((cache) => cache.put('./index.html', copy));
                     }
                     return response;
                 })
@@ -48,13 +48,13 @@ self.addEventListener('fetch', (event) => {
         return;
     }
 
-    // 本地静态资源 stale-while-revalidate：离线秒开，同时后台刷新版本。
+    // 静态资源 stale-while-revalidate：离线秒开，同时后台刷新缓存。
     event.respondWith(
         caches.match(request).then((cached) => {
             const network = fetch(request).then((response) => {
                 if (response && response.ok) {
                     const copy = response.clone();
-                    event.waitUntil(caches.open(CACHE_NAME).then((cache) => cache.put(request, copy)));
+                    caches.open(CACHE_NAME).then((cache) => cache.put(request, copy));
                 }
                 return response;
             }).catch(() => cached);
