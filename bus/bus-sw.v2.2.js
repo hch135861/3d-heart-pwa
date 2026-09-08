@@ -1,7 +1,8 @@
-const CACHE = 'bus-commute-shell-v2.2.1';
+const CACHE = 'bus-commute-shell-v2.2.2';
 const SHELL = [
   './v2.html', './app.v2.2.mjs', './domain.v2.1.mjs', './theme.v2.1.css',
-  './sound.v2.2.1.js', './bus.webmanifest', './bus-icon.svg', './bus-icon-192.png', './bus-icon-512.png'
+  './sound.v2.2.1.js', './calendar.v2.2.2.js',
+  './bus.webmanifest', './bus-icon.svg', './bus-icon-192.png', './bus-icon-512.png'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE)
