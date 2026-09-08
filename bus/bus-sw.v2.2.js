@@ -1,7 +1,7 @@
-const CACHE = 'bus-commute-shell-v2.2.0';
+const CACHE = 'bus-commute-shell-v2.2.1';
 const SHELL = [
   './v2.html', './app.v2.2.mjs', './domain.v2.1.mjs', './theme.v2.1.css',
-  './bus.webmanifest', './bus-icon.svg', './bus-icon-192.png', './bus-icon-512.png'
+  './sound.v2.2.1.js', './bus.webmanifest', './bus-icon.svg', './bus-icon-192.png', './bus-icon-512.png'
 ];
 self.addEventListener('install', event => {
   event.waitUntil(caches.open(CACHE)
@@ -42,8 +42,8 @@ self.addEventListener('notificationclick', event => {
   event.notification.close();
   const target = event.notification.data?.url || new URL('./v2.html', self.registration.scope).href;
   event.waitUntil((async () => {
-    const clientsList = await clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const client of clientsList) {
+    const list = await clients.matchAll({ type: 'window', includeUncontrolled: true });
+    for (const client of list) {
       if (client.url.startsWith(self.registration.scope) && 'focus' in client) {
         await client.focus();
         if ('navigate' in client) await client.navigate(target).catch(() => {});
