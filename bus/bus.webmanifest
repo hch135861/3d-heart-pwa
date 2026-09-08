@@ -2,7 +2,7 @@
   "id": "./v2.html",
   "name": "群辉到民辉 · 通勤助手",
   "short_name": "公交通勤",
-  "description": "台州群辉到民辉公交到站预估与通勤提醒",
+  "description": "台州群辉到民辉公交到站预估、通勤建议与预约提醒",
   "lang": "zh-CN",
   "start_url": "./v2.html",
   "scope": "./",
