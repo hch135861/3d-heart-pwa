@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'heart-pwa-';
-const CACHE_NAME = 'heart-pwa-v3.12-luobu';
+const CACHE_NAME = 'heart-pwa-v3.12-bus2';
 const CORE_ASSETS = [
     './', './index.html', './luobu.html', './3D-爱心-V3.10-洛布辛苦啦.html',
     './manifest.webmanifest', './luobu.webmanifest',
@@ -7,9 +7,9 @@ const CORE_ASSETS = [
     './vendor/three.module.js', './vendor/OrbitControls.js',
 ];
 const scopeURL = new URL(self.registration.scope);
+const busPath = new URL('./bus/', scopeURL).pathname;
 
 self.addEventListener('install', (event) => {
-    // 全部离线资源就绪才接管；安装失败时继续使用旧版本。
     event.waitUntil(caches.open(CACHE_NAME)
         .then((cache) => cache.addAll(CORE_ASSETS.map((path) => new Request(new URL(path, scopeURL), { cache: 'reload' }))))
         .then(() => self.skipWaiting()));
@@ -35,7 +35,16 @@ function offlinePage() {
 self.addEventListener('fetch', (event) => {
     const request = event.request, url = new URL(request.url);
     if (request.method !== 'GET' || url.origin !== scopeURL.origin || !url.pathname.startsWith(scopeURL.pathname)) return;
-    // 当前页面没有查询参数驱动的内容；仅去掉参数以命中该页面自己的离线副本。
+    // Bus pages and their versioned assets must never fall back to an old heart-app cache.
+    // Leave the heart's offline behavior unchanged; do not unregister other workers.
+    if (url.pathname.startsWith(busPath) || url.pathname === busPath.slice(0, -1)) {
+        event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => new Response(
+            request.mode === 'navigate'
+                ? '<!doctype html><html lang="zh-CN"><meta charset="utf-8"><meta name="viewport" content="width=device-width"><title>公交查询需要联网</title><body style="background:#09131c;color:#edf5f8;font:18px sans-serif;padding:2rem"><h1>公交查询需要联网</h1><p>未使用旧页面或旧到站时间。请恢复网络后刷新。</p></body></html>' : '',
+            { status: 503, headers: { 'Cache-Control': 'no-store', 'Content-Type': request.mode === 'navigate' ? 'text/html; charset=utf-8' : 'text/plain' } }
+        )));
+        return;
+    }
     const pageKey = new URL(url.pathname, url.origin).href;
     if (request.mode === 'navigate') {
         event.respondWith((async () => {
@@ -48,13 +57,11 @@ self.addEventListener('fetch', (event) => {
                 if (response.status >= 500 && cached) return cached;
                 return await save(cache, pageKey, response);
             } catch {
-                // 不再把洛布版写入 index.html，也不把未知页面替换成通用首页。
                 return cached || offlinePage();
             } finally { clearTimeout(timer); }
         })());
         return;
     }
-    // JS 与字体等静态文件保持同一发布版本；新版通过缓存版本号整体刷新。
     event.respondWith((async () => {
         const cache = await caches.open(CACHE_NAME);
         const cached = await cache.match(request);
