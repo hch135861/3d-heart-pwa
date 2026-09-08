@@ -4,17 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09131c">
-<meta name="app-version" content="bus-2.1.0">
-<meta name="description" content="台州群辉到民辉公交到站预估与通勤提醒。">
+<meta name="app-version" content="bus-2.2.0">
+<meta name="description" content="台州群辉到民辉公交到站预估、通勤建议与预约提醒。">
 <title>群辉 → 民辉 · 通勤助手</title>
 <link rel="manifest" href="./bus.webmanifest">
 <link rel="icon" href="./bus-icon.svg" type="image/svg+xml">
 <link rel="apple-touch-icon" href="./bus-icon-192.png">
 <link rel="stylesheet" href="./theme.v2.1.css">
+<style>
+.appointment{margin:16px 0;border:1px solid #355063;border-radius:18px;padding:5px 15px;background:#0e1c27}.appointment[open]{padding-bottom:15px}.appointment-form{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,.7fr);gap:10px;padding:10px 0}.appointment-form label{position:relative}.appointment-form label span{position:absolute;right:10px;bottom:13px;color:#8fa7b7;font-size:12px;pointer-events:none}.appointment-form input[type=number]{padding-right:44px}.appointment-actions{display:grid;grid-template-columns:1fr 1fr;gap:8px}.appointment-actions button{border:1px solid #3a5161;border-radius:12px;background:#182c3a;color:#edf5f8;padding:0 11px;font-size:13px;font-weight:650}.appointment-actions .primary{background:#95eed0;border-color:#95eed0;color:#0b2b23}.appointment-actions .wide{grid-column:1/-1}.appointment-status{font-size:12px;line-height:1.7;color:#a1b6c4;margin:12px 0 0}.appointment-status[data-tone=warn]{color:#ffcf87}.appointment-status[data-tone=good]{color:#95eed0}.ring-note{font-size:11px;line-height:1.7;color:#829dab;margin:10px 0 0}.alarm-overlay{position:fixed;inset:0;z-index:30;background:#061017e8;display:grid;place-items:center;padding:24px;backdrop-filter:blur(12px)}.alarm-overlay[hidden]{display:none}.alarm-card{width:min(420px,100%);border:1px solid #4f756a;border-radius:24px;background:linear-gradient(145deg,#163a30,#101f2b);padding:25px;text-align:center;box-shadow:0 24px 90px #000b}.alarm-card h2{font-size:32px;margin:12px 0;color:#95eed0}.alarm-card p{color:#b5c8d2;line-height:1.7}.alarm-card button{width:100%;border:0;border-radius:14px;background:#95eed0;color:#09291f;font-weight:800;font-size:16px}.alarm-badge{display:inline-block;border:1px solid #42685c;border-radius:999px;padding:5px 9px;color:#b8dfd2;font-size:11px}.local-pill{display:inline-flex;align-items:center;gap:6px;margin-top:10px;padding:5px 9px;border-radius:999px;background:#152b31;color:#9fc6c8;font-size:11px}.local-pill::before{content:"";width:7px;height:7px;border-radius:50%;background:#95eed0}@media(max-width:430px){.appointment-form{grid-template-columns:1fr}.appointment-actions{grid-template-columns:1fr}.appointment-actions .wide{grid-column:auto}}
+</style>
 </head>
 <body>
 <main class="wrap">
-<header><div class="eyebrow">台州 · 公交通勤助手</div><span class="version">v2.1.0 通勤模式</span></header>
+<header><div class="eyebrow">台州 · 公交通勤助手</div><span class="version">v2.2.0 预约提醒</span></header>
 <h1 id="heading">群辉 <span>→</span> 民辉</h1>
 <p class="subtitle">先判断数据是否可信，再告诉你现在要不要出门。</p>
 
@@ -22,15 +25,32 @@
   <div class="eyebrow">通勤建议</div><h2>正在计算</h2><p>等待可信的到站预估。</p>
 </section>
 
+<details class="appointment" open>
+<summary>预约提醒与铃声</summary>
+<div class="appointment-form">
+  <label>预约出发时间<input id="appointment-time" type="datetime-local"></label>
+  <label>提前提醒<input id="appointment-lead" type="number" min="0" max="60" step="1" inputmode="numeric" value="5"><span>分钟</span></label>
+</div>
+<div class="appointment-actions">
+  <button id="sound-enable" type="button">启用铃声并试播</button>
+  <button id="calendar-export" type="button">加入 iPhone 日历</button>
+  <button id="appointment-clear" type="button">取消预约</button>
+  <button id="appointment-save" type="button" class="primary">保存预约</button>
+</div>
+<p id="appointment-status" class="appointment-status">还没有预约。</p>
+<p class="ring-note">iPhone 不允许网页直接调用系统“电话铃声/闹钟铃声”。页面开着时会播放本地提示音；想在锁屏或页面关闭后可靠提醒，请同时点“加入 iPhone 日历”，由系统通知音提醒。</p>
+<div class="local-pill">页面外壳可本地打开；实时公交仍需联网</div>
+</details>
+
 <details class="commute-settings" open>
 <summary>通勤设置</summary>
 <form id="commute-form" class="commute-form">
 <label>走到站点<input id="walk" type="number" min="0" max="30" step="1" inputmode="numeric" value="4"><span>分钟</span></label>
 <label>预留余量<input id="buffer" type="number" min="0" max="10" step="1" inputmode="numeric" value="1"><span>分钟</span></label>
-<label>提醒阈值<input id="alert" type="number" min="1" max="30" step="1" inputmode="numeric" value="6"><span>分钟</span></label>
+<label>到站提醒阈值<input id="alert" type="number" min="1" max="30" step="1" inputmode="numeric" value="6"><span>分钟</span></label>
 <button id="notify" type="button">开启到站提醒</button>
 </form>
-<p class="hint">提醒只在浏览器允许通知、且页面能正常刷新时触发；不是后台推送服务。</p>
+<p class="hint">到站提醒依赖页面刷新。锁屏/关闭页面时，请以系统日历预约提醒作为兜底。</p>
 </details>
 
 <details class="settings"><summary>更换上车站</summary>
@@ -38,23 +58,22 @@
 </details>
 
 <div class="tabs" aria-label="车辆筛选"><button id="minhui" aria-pressed="true">民辉方向</button><button id="all" aria-pressed="false">全部方向</button></div>
-
 <section id="winner" class="hero" data-state="loading"><div class="eyebrow">到站预估</div><h2>正在查询</h2><p>没有有效时间时，不推荐“最快一班”。</p></section>
 <div id="status" class="status" role="status" aria-live="polite">准备连接数据源…</div>
-
 <div class="list-title"><h2>车辆记录</h2><span id="count">—</span></div>
 <section id="list" aria-label="到站记录"></section>
 
 <details class="diagnostics"><summary>数据与连接状态</summary><div id="diagnostics"></div>
 <p>“可信度”只表示接口字段的完整性和相互一致性，不代表运营方保证。获取时间也不等于车辆定位更新时间。该接口没有提供完整途经站表；“民辉方向”仅匹配终点为民辉、民辉站或公交民辉站的记录。</p>
 <a href="https://www.code410.com/api/231" target="_blank" rel="noopener noreferrer">查看数据源说明</a></details>
-
-<footer>异常记录不参与推荐 · 旧数据不会倒数到零<br>通勤建议基于本次刷新，不会在本地偷偷递减 ETA。<br>请核对站牌终点方向，以运营方现场信息为准。</footer>
+<footer>异常记录不参与推荐 · 旧数据不会倒数到零<br>预约铃声仅在页面仍可运行时保证播放；系统日历负责锁屏/关闭页面后的可靠提醒。<br>请核对站牌终点方向，以运营方现场信息为准。</footer>
 </main>
 
 <div class="dock"><div><span id="age">尚未获取数据</span><small id="next">自动刷新已开启</small></div><button id="pause" aria-pressed="false">暂停</button><button id="refresh" class="primary">立即刷新</button></div>
-
+<div id="alarm-overlay" class="alarm-overlay" hidden role="alertdialog" aria-modal="true" aria-labelledby="alarm-title">
+  <div class="alarm-card"><span class="alarm-badge">预约提醒</span><h2 id="alarm-title">该准备出发了</h2><p id="alarm-text">群辉 → 民辉</p><button id="alarm-stop" type="button">停止铃声</button></div>
+</div>
 <noscript><p>请启用 JavaScript 后查询；这里不会使用静态样例冒充实时车辆。</p></noscript>
-<script type="module" src="./app.v2.1.mjs"></script>
+<script type="module" src="./app.v2.2.mjs"></script>
 </body>
 </html>
