@@ -65,7 +65,7 @@
     } catch {}
   }
 
-  function openCalendarImport(ics, at) {
+  function openCalendarImport(ics) {
     const blob = new Blob([ics], { type: 'text/calendar;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -77,7 +77,6 @@
     document.body.appendChild(a);
     a.click();
     a.remove();
-    // Safari needs the blob URL to stay alive long enough for its calendar preview to consume it.
     setTimeout(() => URL.revokeObjectURL(url), 120000);
   }
 
@@ -95,14 +94,13 @@
   async function oneTapCalendar(event) {
     event.preventDefault();
     event.stopImmediatePropagation();
-    let data;
     try {
-      data = currentAppointment();
+      const data = currentAppointment();
       const ics = makeIcs(data);
       rememberLocally(data);
       setStatus('正在打开 iPhone 日历导入…系统会要求你最后确认一次“添加”。', 'good');
       try {
-        openCalendarImport(ics, data.at);
+        openCalendarImport(ics);
       } catch {
         await fallbackShare(ics, data.at);
       }
@@ -113,8 +111,13 @@
 
   const button = $('calendar-export');
   if (button) {
-    button.textContent = '一键加入日历';
-    button.disabled = false;
+    const keepReady = () => {
+      button.textContent = '一键加入日历';
+      if (button.disabled) button.disabled = false;
+    };
+    keepReady();
     button.addEventListener('click', oneTapCalendar, true);
+    new MutationObserver(keepReady).observe(button, { attributes: true, attributeFilter: ['disabled'] });
+    setInterval(keepReady, 1500);
   }
 })();
