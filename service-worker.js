@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'heart-pwa-';
-const CACHE_NAME = 'heart-pwa-v3.12-bus2';
+const CACHE_NAME = 'heart-pwa-v3.12-bus21';
 const CORE_ASSETS = [
     './', './index.html', './luobu.html', './3D-爱心-V3.10-洛布辛苦啦.html',
     './manifest.webmanifest', './luobu.webmanifest',
@@ -35,8 +35,6 @@ function offlinePage() {
 self.addEventListener('fetch', (event) => {
     const request = event.request, url = new URL(request.url);
     if (request.method !== 'GET' || url.origin !== scopeURL.origin || !url.pathname.startsWith(scopeURL.pathname)) return;
-    // Bus pages and their versioned assets must never fall back to an old heart-app cache.
-    // Leave the heart's offline behavior unchanged; do not unregister other workers.
     if (url.pathname.startsWith(busPath) || url.pathname === busPath.slice(0, -1)) {
         event.respondWith(fetch(request, { cache: 'no-store' }).catch(() => new Response(
             request.mode === 'navigate'
@@ -68,5 +66,17 @@ self.addEventListener('fetch', (event) => {
         if (cached) return cached;
         try { return await save(cache, request, await fetch(request)); }
         catch { return new Response('', { status: 503, statusText: 'Offline' }); }
+    })());
+});
+
+self.addEventListener('notificationclick', (event) => {
+    const target = new URL(event.notification?.data?.url || './bus/v2.html', scopeURL).href;
+    event.notification?.close();
+    event.waitUntil((async () => {
+        const windows = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
+        for (const client of windows) {
+            if (client.url === target && 'focus' in client) return client.focus();
+        }
+        return self.clients.openWindow ? self.clients.openWindow(target) : undefined;
     })());
 });

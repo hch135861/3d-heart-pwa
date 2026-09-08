@@ -1,0 +1,17 @@
+{
+  "id": "./v2.html",
+  "name": "群辉到民辉 · 通勤助手",
+  "short_name": "公交通勤",
+  "description": "台州群辉到民辉公交到站预估与通勤提醒",
+  "lang": "zh-CN",
+  "start_url": "./v2.html",
+  "scope": "./",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09131c",
+  "theme_color": "#09131c",
+  "icons": [
+    {"src": "./bus-icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable"},
+    {"src": "./bus-icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable"}
+  ]
+}

@@ -4,28 +4,57 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#09131c">
-<meta name="app-version" content="bus-2.0.0">
-<title>群辉 → 民辉 · 公交到站</title>
-<link rel="stylesheet" href="./theme.v2.css">
+<meta name="app-version" content="bus-2.1.0">
+<meta name="description" content="台州群辉到民辉公交到站预估与通勤提醒。">
+<title>群辉 → 民辉 · 通勤助手</title>
+<link rel="manifest" href="./bus.webmanifest">
+<link rel="icon" href="./bus-icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="./bus-icon-192.png">
+<link rel="stylesheet" href="./theme.v2.1.css">
 </head>
 <body>
 <main class="wrap">
-<header><div class="eyebrow">台州 · 公交到站预估</div><span class="version">v2.0.0 重构版</span></header>
+<header><div class="eyebrow">台州 · 公交通勤助手</div><span class="version">v2.1.0 通勤模式</span></header>
 <h1 id="heading">群辉 <span>→</span> 民辉</h1>
-<p class="subtitle">先校验时间，再比较到站顺序。</p>
+<p class="subtitle">先判断数据是否可信，再告诉你现在要不要出门。</p>
+
+<section id="commute" class="commute" data-plan="unknown">
+  <div class="eyebrow">通勤建议</div><h2>正在计算</h2><p>等待可信的到站预估。</p>
+</section>
+
+<details class="commute-settings" open>
+<summary>通勤设置</summary>
+<form id="commute-form" class="commute-form">
+<label>走到站点<input id="walk" type="number" min="0" max="30" step="1" inputmode="numeric" value="4"><span>分钟</span></label>
+<label>预留余量<input id="buffer" type="number" min="0" max="10" step="1" inputmode="numeric" value="1"><span>分钟</span></label>
+<label>提醒阈值<input id="alert" type="number" min="1" max="30" step="1" inputmode="numeric" value="6"><span>分钟</span></label>
+<button id="notify" type="button">开启到站提醒</button>
+</form>
+<p class="hint">提醒只在浏览器允许通知、且页面能正常刷新时触发；不是后台推送服务。</p>
+</details>
+
 <details class="settings"><summary>更换上车站</summary>
 <form id="query-form"><label>城市<input id="city" value="台州" required maxlength="20" autocomplete="off"></label><label>上车站<input id="site" value="群辉" required maxlength="40" autocomplete="off"></label><button type="submit">查询该站</button></form>
 </details>
+
 <div class="tabs" aria-label="车辆筛选"><button id="minhui" aria-pressed="true">民辉方向</button><button id="all" aria-pressed="false">全部方向</button></div>
+
 <section id="winner" class="hero" data-state="loading"><div class="eyebrow">到站预估</div><h2>正在查询</h2><p>没有有效时间时，不推荐“最快一班”。</p></section>
 <div id="status" class="status" role="status" aria-live="polite">准备连接数据源…</div>
+
 <div class="list-title"><h2>车辆记录</h2><span id="count">—</span></div>
 <section id="list" aria-label="到站记录"></section>
-<details class="diagnostics"><summary>数据与连接状态</summary><div id="diagnostics"></div><p>获取时间不等于车辆定位更新时间。该接口没有提供定位更新时间，也没有提供完整途经站表；“民辉方向”仅匹配终点为民辉、民辉站或公交民辉站的记录。</p><a href="https://www.code410.com/api/231" target="_blank" rel="noopener noreferrer">查看数据源说明</a></details>
-<footer>异常记录不参与推荐 · 旧数据不会倒数到零<br>请核对站牌终点方向，以运营方现场信息为准。<br><a id="latest" href="./v2.html">重新加载新版</a></footer>
+
+<details class="diagnostics"><summary>数据与连接状态</summary><div id="diagnostics"></div>
+<p>“可信度”只表示接口字段的完整性和相互一致性，不代表运营方保证。获取时间也不等于车辆定位更新时间。该接口没有提供完整途经站表；“民辉方向”仅匹配终点为民辉、民辉站或公交民辉站的记录。</p>
+<a href="https://www.code410.com/api/231" target="_blank" rel="noopener noreferrer">查看数据源说明</a></details>
+
+<footer>异常记录不参与推荐 · 旧数据不会倒数到零<br>通勤建议基于本次刷新，不会在本地偷偷递减 ETA。<br>请核对站牌终点方向，以运营方现场信息为准。</footer>
 </main>
+
 <div class="dock"><div><span id="age">尚未获取数据</span><small id="next">自动刷新已开启</small></div><button id="pause" aria-pressed="false">暂停</button><button id="refresh" class="primary">立即刷新</button></div>
+
 <noscript><p>请启用 JavaScript 后查询；这里不会使用静态样例冒充实时车辆。</p></noscript>
-<script type="module" src="./app.v2.mjs"></script>
+<script type="module" src="./app.v2.1.mjs"></script>
 </body>
 </html>
